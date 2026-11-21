@@ -1,0 +1,17 @@
+license="All Rights Reserved"
+[[mods]]
+modId="mxt_forging_test"
+version="1.0"
+displayName="ForgingWorkstations Test Mod"
+[[dependencies.mxt_forging_test]]
+modId="mxt_forging"
+type="required"
+versionRange="*"
+ordering="AFTER"
+side="BOTH"
+[[dependencies.mxt_forging_test]]
+modId="mxt_test"
+type="required"
+versionRange="*"
+ordering="AFTER"
+side="BOTH"

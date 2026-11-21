@@ -1,0 +1,187 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '2.0.143'
+    id 'idea'
+}
+
+tasks.withType(Wrapper).configureEach {
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+version = mod_version
+group = mod_group_id
+
+sourceSets.main.resources {
+    srcDir('src/generated/resources')
+
+    exclude("src/generated/**/.cache")
+}
+
+repositories {
+    exclusiveContent {
+        forRepository { maven { url = "https://maven.createmod.net:6085/" } }
+        filter {
+            includeGroup "net.createmod.ponder"
+            includeGroup "net.createmod.catnip"
+        }
+    }
+    exclusiveContent {
+        forRepository { maven { url = "https://cursemaven.com" } }
+        filter { includeGroup "curse.maven" }
+    }
+    maven { url = "https://jitpack.io" }
+    maven { url = "https://maven.sighs.cc/repository/maven-public/" }
+    maven { url = "https://maven.theillusivec4.top/" }
+    maven { url = "https://maven.latvian.dev/releases" }
+    maven { url = "https://maven.blamejared.com/" }
+    maven { url = "https://modmaven.dev" }
+    maven { url = "https://maven.ftb.dev/releases" }
+    maven { url = "https://maven.architectury.dev" }
+    maven { url = "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/" }
+}
+
+def testModSourceSet = sourceSets.create('testMod') {
+    java.setSrcDirs(['src/test-mod/java'])
+    resources.setSrcDirs(['src/test-mod/resources'])
+}
+testModSourceSet.compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+testModSourceSet.runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+def testClientGameDirectory = project.findProperty('mxtTestClientGameDirectory') ?: 'run-test-client'
+def testClientUsername = project.findProperty('mxtTestClientUsername')
+
+neoForge {
+    version = project.neo_version
+
+    runs {
+        client {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        server {
+            server()
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        testClient {
+            client()
+            gameDirectory = file(testClientGameDirectory)
+            ideName = 'Test Client'
+            systemProperty 'fml.debugLoading', 'true'
+            if (testClientUsername) {
+                programArgument '--username'
+                programArgument testClientUsername
+            }
+        }
+
+        gameTestServer {
+            type = "gameTestServer"
+            gameDirectory = file('run-game-test-server')
+            systemProperty 'neoforge.enabledGameTestNamespaces', "${mod_id}_test"
+            programArgument '--tests'
+            programArgument project.findProperty('mxtGameTestSelection') ?: "${mod_id}_test:*"
+        }
+
+        data {
+            clientData()
+            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+        }
+
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+
+            logLevel = org.slf4j.event.Level.INFO
+            def testingRun = name in ['testClient', 'gameTestServer']
+            sourceSet = testingRun ? testModSourceSet : sourceSets.main
+            loadedMods = project.provider {
+                project.neoForge.mods.findAll { testingRun || !it.name.endsWith('_test') }
+            }
+            taskBefore(tasks.named('classes'))
+            if (testingRun) taskBefore(tasks.named(testModSourceSet.classesTaskName))
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+        "${mod_id}_test" { sourceSet(testModSourceSet) }
+    }
+}
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+}
+
+dependencies {
+    // Dependencies
+    implementation "curse.maven:jupiter-1072905:8569832"
+    implementation "curse.maven:saturn-lib-1767455:9661688"
+    implementation "com.sighs:ApricityUI-neoforge-26.1:1.2.9"
+
+    // MiXianTu
+    implementation "curse.maven:mxt-1691981:9729145"
+
+    // Compatibility
+    compileOnly "curse.maven:picker-1753447:9251435"
+    compileOnly "curse.maven:jade-324717:8651070"
+    compileOnly "mezz.jei:jei-26.1.2-neoforge-api:29.43.0.105"
+    compileOnly "dev.latvian.mods:kubejs-neoforge:26.1.2-8.0.4"
+
+    // Tests
+    testModImplementation files("libs/mxt-test-mod.jar")
+    testModCompileOnly "curse.maven:reincarnation-1785404:9492925"
+}
+
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/repo"
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8' 
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}
+
+tasks.named('jar') { from('LICENSE') }

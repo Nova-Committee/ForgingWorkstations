@@ -1,0 +1,79 @@
+/* Forging ornaments occupy the empty margins beside the inventory. */
+
+#panel {
+    width: 322px;
+    height: 234px;
+    --ornament-image: url("/mxt_forging/forging/ornaments/hammer.svg");
+    --ornament-size: 52px 60px;
+    --ornament-position: 16px 157px;
+    --ornament-secondary-image: url("/mxt_forging/forging/ornaments/anvil.svg");
+    --ornament-secondary-size: 52px 60px;
+    --ornament-secondary-position: 254px 157px;
+}
+
+.cell,
+.frame {
+    width: 18px;
+    height: 18px;
+}
+
+.cell .icon,
+.cell .tex,
+.frame .icon,
+.frame .tex {
+    left: 0;
+    top: 0;
+}
+
+.track {
+    width: 12px;
+    height: 76px;
+}
+
+.scroller {
+    left: 64px;
+    top: 18px;
+    width: 12px;
+    height: 15px;
+}
+
+#mt_bar {
+    left: 307px;
+}
+
+.meter {
+    width: 162px;
+    height: 6px;
+}
+
+.meter-mark {
+    position: absolute;
+    top: 74px;
+    height: 8px;
+    display: none;
+}
+
+.meter-mark.band {
+    top: 76px;
+    left: 0;
+    height: 4px;
+    background-color: var(--green);
+}
+
+.meter-mark.zero {
+    left: 0;
+    width: 1px;
+    background-color: var(--ink-muted);
+}
+
+.meter-mark.value {
+    left: 0;
+    width: 1px;
+    background-color: var(--red);
+}
+
+.meter-mark.predicted {
+    left: 0;
+    width: 1px;
+    background-color: var(--gold);
+}
